@@ -1,6 +1,7 @@
 import threading
 import subprocess
-from queue import Queue
+import time
+from queue import Queue, Empty
 
 class Scheduler:
     def __init__(self, servers, gpus):
@@ -10,7 +11,8 @@ class Scheduler:
         self.task_queue = Queue()
         self.task_counter = 0
         self.lock = threading.Lock()
-        self.gpu_usage = {server: [0.0] * gpus for server in servers}  # Fractional usage
+        self.gpu_usage = {server: [0] * gpus for server in servers}
+        self.processes = {}  # To keep track of running processes
 
         # Start a thread to monitor task completion
         self.monitor_thread = threading.Thread(target=self.monitor_tasks)
@@ -23,31 +25,42 @@ class Scheduler:
             task = {
                 'id': task_id,
                 'command': command,
-                'gpu_request': float(gpu_request),  # Convert to float
+                'gpu_request': gpu_request,
                 'status': 'queued',
                 'server': None,
-                'gpu': None
+                'gpu': None,
+                'process': None
             }
             self.tasks.append(task)
             self.task_queue.put(task)
             return task_id
 
     def cancel_task(self, task_id):
+        print("DEBUG:: cancel_task  ", task_id)
+        task_id = int(task_id)
         with self.lock:
             for task in self.tasks:
-                if task['id'] == task_id and task['status'] == 'running':
-                    # Terminate the process if running
-                    # Code to terminate the process
-                    task['status'] = 'cancelled'
-                    return True
-                elif task['id'] == task_id and task['status'] == 'queued':
-                    task['status'] = 'cancelled'
-                    return True
+                if task['id'] == task_id:
+                    if task['status'] == 'running':
+                        # Attempt to terminate the running process
+                        process = self.processes.get(task_id)
+                        if process:
+                            process.terminate()
+                            self.processes.pop(task_id, None)
+                            task['status'] = 'cancelled'
+                            return True
+                    elif task['status'] == 'queued':
+                        task['status'] = 'cancelled'
+                        self.task_queue.queue = [t for t in self.task_queue.queue if t['id'] != task_id]
+                        return True
         return False
 
     def monitor_tasks(self):
         while True:
-            task = self.task_queue.get()
+            try:
+                task = self.task_queue.get(timeout=1)
+            except Empty:
+                continue
             if task['status'] == 'queued':
                 self.run_task(task)
             self.task_queue.task_done()
@@ -57,8 +70,8 @@ class Scheduler:
             # Find an available server and GPU
             for server in self.servers:
                 for gpu in range(self.gpus):
-                    if self.gpu_usage[server][gpu] + task['gpu_request'] <= 1.0:
-                        self.gpu_usage[server][gpu] += task['gpu_request']
+                    if self.gpu_usage[server][gpu] == 0:
+                        self.gpu_usage[server][gpu] = task['gpu_request']
                         task['status'] = 'running'
                         task['server'] = server
                         task['gpu'] = gpu
@@ -67,20 +80,36 @@ class Scheduler:
                     break
 
         if task['status'] == 'running':
-            threading.Thread(target=self.execute_task, args=(task,)).start()
+            # Run the task on the selected server and GPU
+            task['process'] = threading.Thread(target=self.execute_task, args=(task,))
+            task['process'].start()
         else:
             # Requeue the task if no GPU is available
             task['status'] = 'queued'
             self.task_queue.put(task)
 
     def execute_task(self, task):
-        command = f"ssh {task['server']} 'CUDA_VISIBLE_DEVICES={task['gpu']} {task['command']}'"
+        command = f" {task['command']}"
+        # command = f"ssh {task['server']} 'CUDA_VISIBLE_DEVICES={task['gpu']} {task['command']}'"
+        print(f"DEBUG: scheduler execute_task {command=}")
+        # command = f"ssh {task['server']} 'CUDA_VISIBLE_DEVICES={task['gpu']} {task['command']}'"
         process = subprocess.Popen(command, shell=True)
+        
+        # Store the process in the task for potential cancellation
+        with self.lock:
+            self.processes[task['id']] = process
+
         process.wait()
 
+        # Get the task completion status
+        ret = process.returncode
+
         with self.lock:
-            task['status'] = 'completed'
-            self.gpu_usage[task['server']][task['gpu']] -= task['gpu_request']
+            if task['status'] != 'cancelled':
+                task['status'] = 'completed'
+                
+            self.gpu_usage[task['server']][task['gpu']] = 0
+            self.processes.pop(task['id'], None)
 
     def get_tasks(self):
         with self.lock:
