@@ -11,7 +11,8 @@ class Scheduler:
         self.task_queue = Queue()
         self.task_counter = 0
         self.lock = threading.Lock()
-        self.gpu_usage = {server: [0] * gpus for server in servers}
+        # Use floating-point values to track GPU usage
+        self.gpu_usage = {server: [0.0] * gpus for server in servers}
         self.processes = {}  # To keep track of running processes
 
         # Start a thread to monitor task completion
@@ -46,11 +47,13 @@ class Scheduler:
                         process = self.processes.get(task_id)
                         if process:
                             process.terminate()
+                            process.wait()  # Ensure the process is terminated
                             self.processes.pop(task_id, None)
                             task['status'] = 'cancelled'
                             return True
                     elif task['status'] == 'queued':
                         task['status'] = 'cancelled'
+                        # Remove the task from the queue
                         self.task_queue.queue = [t for t in self.task_queue.queue if t['id'] != task_id]
                         return True
         return False
@@ -67,11 +70,11 @@ class Scheduler:
 
     def run_task(self, task):
         with self.lock:
-            # Find an available server and GPU
+            # Find an available server and GPU with enough capacity
             for server in self.servers:
                 for gpu in range(self.gpus):
-                    if self.gpu_usage[server][gpu] == 0:
-                        self.gpu_usage[server][gpu] = task['gpu_request']
+                    if self.gpu_usage[server][gpu] + task['gpu_request'] <= 1.0:  # 1.0 means 100% of the GPU
+                        self.gpu_usage[server][gpu] += task['gpu_request']
                         task['status'] = 'running'
                         task['server'] = server
                         task['gpu'] = gpu
@@ -90,7 +93,6 @@ class Scheduler:
 
     def execute_task(self, task):
         command = f" {task['command']}"
-        # command = f"ssh {task['server']} 'CUDA_VISIBLE_DEVICES={task['gpu']} {task['command']}'"
         print(f"DEBUG: scheduler execute_task {command=}")
         # command = f"ssh {task['server']} 'CUDA_VISIBLE_DEVICES={task['gpu']} {task['command']}'"
         process = subprocess.Popen(command, shell=True)
@@ -108,7 +110,8 @@ class Scheduler:
             if task['status'] != 'cancelled':
                 task['status'] = 'completed'
                 
-            self.gpu_usage[task['server']][task['gpu']] = 0
+            # Free up GPU resources
+            self.gpu_usage[task['server']][task['gpu']] -= task['gpu_request']
             self.processes.pop(task['id'], None)
 
     def get_tasks(self):

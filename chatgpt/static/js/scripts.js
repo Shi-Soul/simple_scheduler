@@ -15,7 +15,7 @@ function submitTask() {
             alert(`Task submitted with ID: ${data.id}`);
             refreshStatus();
         } else {
-            alert('Failed to submit task');
+            alert('Failed to submit task: ' + data.error);
         }
     })
     .catch((error) => {
