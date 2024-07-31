@@ -93,7 +93,7 @@ class Scheduler:
 
     def execute_task(self, task):
         # command = f" {task['command']}"
-        command = f"ssh {task['server']} 'CUDA_VISIBLE_DEVICES={task['gpu']} {task['command']}'"
+        command = f"ssh {task['server']} 'export CUDA_VISIBLE_DEVICES={task['gpu']}; {task['command']}'"
         print(f"DEBUG: scheduler execute_task {command=}")
         process = subprocess.Popen(command, shell=True)
         

@@ -31,11 +31,11 @@ def submit_task():
 
     try:
         gpu_request = float(gpu_request)
-        assert 0.1 <= gpu_request and gpu_request<=1.0
+        assert 0.0 <= gpu_request and gpu_request<=1.0
     except ValueError:
         return jsonify({'error': 'Invalid GPU request format. It should be a number.'}), 400
     except AssertionError:
-        return jsonify({'error': 'GPU request must be between 0.1 and 1.0.'}), 400
+        return jsonify({'error': 'GPU request must be between 0.0 and 1.0.'}), 400
 
     task_id = scheduler.add_task(command, gpu_request)
     return jsonify({'id': task_id}), 201
