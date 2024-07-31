@@ -12,12 +12,12 @@
     <input type="text" id="command" placeholder="Command">
     <input type="text" id="gpu_request" placeholder="GPU Request (e.g., 1.0, 0.5, 0.33)">
     <button onclick="submitTask()">Submit</button>
-    <h2>Cancel Task</h2>
-    <input type="text" id="cancel_id" placeholder="Task ID to Cancel">
-    <button onclick="cancelTask()">Cancel Task</button>
     <h2>Task Status</h2>
     <button onclick="refreshStatus()">Refresh Status</button>
-    <div id="status"></div>
+    <pre id="status"></pre>
+
+    <h2>GPU Status</h2>
+    <pre id="gpu-status"></pre>
 </div>
 <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
 </body>

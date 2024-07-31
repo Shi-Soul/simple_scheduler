@@ -9,9 +9,16 @@ scheduler = Scheduler(servers=["yq-3080-1", "yq-3080-2"], gpus=8)
 def index():
     return render_template('index.html')
 
+
 @main.route('/status', methods=['GET'])
 def status():
-    return jsonify(format_tasks(scheduler.get_tasks()))
+    task_status = format_tasks(scheduler.get_tasks())
+    gpu_status = scheduler.get_gpu_status()
+    return jsonify({
+        'tasks': task_status,
+        'gpu_status': gpu_status
+    })
+
 
 @main.route('/submit', methods=['POST'])
 def submit_task():

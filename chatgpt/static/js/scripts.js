@@ -52,7 +52,27 @@ function refreshStatus() {
     .then(response => response.json())
     .then(data => {
         const statusElement = document.getElementById('status');
-        statusElement.innerHTML = data;
+        const gpuStatusElement = document.getElementById('gpu-status');
+
+        // Display task status
+        statusElement.innerHTML = data.tasks;
+
+        // Format GPU status
+        const gpuStatusHtml = Object.keys(data.gpu_status).map(server => {
+            const serverStatus = data.gpu_status[server].map(gpu => {
+                // Define the padding length for each column
+                const gpuNumber = `GPU ${gpu.gpu}`.padEnd(8); // Adjust as needed
+                const allocated = `Allocated ${(gpu.allocated * 100)}%`.padEnd(24); // Adjust as needed
+                const free = `Free ${gpu.free}`.padEnd(12); // Adjust as needed
+
+                return `${gpuNumber} ${allocated} ${free}`;
+            }).join('\n');
+
+            return `<h3>${server}</h3><pre style="font-family: monospace; white-space: pre;">${serverStatus}</pre>`;
+        }).join('');
+
+        // Display GPU status
+        gpuStatusElement.innerHTML = gpuStatusHtml;
     })
     .catch((error) => {
         console.error('Error:', error);

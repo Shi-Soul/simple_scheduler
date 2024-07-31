@@ -109,6 +109,8 @@ class Scheduler:
         with self.lock:
             if task['status'] != 'cancelled':
                 task['status'] = 'completed'
+            if ret != 0:
+                task['status'] = 'failed'
                 
             # Free up GPU resources
             self.gpu_usage[task['server']][task['gpu']] -= task['gpu_request']
@@ -117,3 +119,17 @@ class Scheduler:
     def get_tasks(self):
         with self.lock:
             return self.tasks
+
+    def get_gpu_status(self):
+        with self.lock:
+            status = {}
+            for server in self.servers:
+                status[server] = []
+                for gpu in range(self.gpus):
+                    usage = self.gpu_usage[server][gpu]
+                    status[server].append({
+                        'gpu': gpu,
+                        'allocated': usage,
+                        'free': usage==0.0
+                    })
+            return status
