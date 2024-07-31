@@ -44,6 +44,11 @@ def submit_task():
 @main.route('/cancel', methods=['POST'])
 def cancel_task():
     task_id = request.json.get('id')
+    try:
+        task_id = int(task_id)
+    except ValueError:
+        return jsonify({'error': 'Invalid task ID format. It should be an integer.'}), 400
+    
     if scheduler.cancel_task(task_id):
         return jsonify({'success': True, 'id':task_id}), 200
     else:

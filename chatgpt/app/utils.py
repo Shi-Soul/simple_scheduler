@@ -1,7 +1,8 @@
 from typing import List, Dict
 
 def format_tasks(tasks: List[Dict]) -> str:
-    tasks = sorted(tasks, key=lambda x: x['id'], reverse=True)
+    tasks = sorted(tasks, key=lambda x: (not x['status']=='running' , -x['id']), 
+                   reverse=False)
 
     # Create HTML table
     html = '''

@@ -39,7 +39,7 @@ function cancelTask() {
             alert(`Task with ID ${data.id} has been canceled.`);
             refreshStatus();
         } else {
-            alert('Failed to cancel task');
+            alert('Failed to cancel task: '+ data.error);
         }
     })
     .catch((error) => {
