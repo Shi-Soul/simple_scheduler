@@ -1,5 +1,4 @@
 from typing import List, Dict
-from prettytable import PrettyTable
 
 def format_tasks(tasks: List[Dict]) -> str:
     tasks = sorted(tasks, key=lambda x: x['id'], reverse=True)

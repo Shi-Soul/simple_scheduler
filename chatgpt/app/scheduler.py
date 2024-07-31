@@ -37,7 +37,7 @@ class Scheduler:
             return task_id
 
     def cancel_task(self, task_id):
-        print("DEBUG:: cancel_task  ", task_id)
+        print("Cancel Task  ", task_id)
         task_id = int(task_id)
         with self.lock:
             for task in self.tasks:
@@ -92,9 +92,9 @@ class Scheduler:
             self.task_queue.put(task)
 
     def execute_task(self, task):
-        command = f" {task['command']}"
+        # command = f" {task['command']}"
+        command = f"ssh {task['server']} 'CUDA_VISIBLE_DEVICES={task['gpu']} {task['command']}'"
         print(f"DEBUG: scheduler execute_task {command=}")
-        # command = f"ssh {task['server']} 'CUDA_VISIBLE_DEVICES={task['gpu']} {task['command']}'"
         process = subprocess.Popen(command, shell=True)
         
         # Store the process in the task for potential cancellation
