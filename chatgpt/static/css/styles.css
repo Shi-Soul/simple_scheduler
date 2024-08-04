@@ -1,9 +1,10 @@
+@import url(https://cdn.jsdelivr.net/npm/firacode@6.2.0/distr/fira_code.css);
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Fira Code', monospace;
 }
 
 .container {
-    width: 80%;
+    width: 88%;
     margin: 0 auto;
 }
 
@@ -18,4 +19,6 @@ input, button {
 pre {
     background: #f4f4f4;
     padding: 10px;
+    font-family: 'Fira Code', monospace;
+    font-size: x-small;
 }
