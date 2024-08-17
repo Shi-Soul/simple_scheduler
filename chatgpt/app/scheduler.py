@@ -54,9 +54,18 @@ class Scheduler:
                     elif task['status'] == 'queued':
                         task['status'] = 'cancelled'
                         # Remove the task from the queue
-                        self.task_queue.queue = [t for t in self.task_queue.queue if t['id'] != task_id]
+                        self.remove_task_from_queue(task_id)
                         return True
         return False
+
+    def remove_task_from_queue(self, task_id):
+        temp_queue = Queue()
+        while not self.task_queue.empty():
+            task = self.task_queue.get()
+            if task['id'] != task_id:
+                temp_queue.put(task)
+        self.task_queue = temp_queue
+
 
     def monitor_tasks(self):
         while True:
@@ -108,9 +117,10 @@ class Scheduler:
 
         with self.lock:
             if task['status'] != 'cancelled':
-                task['status'] = 'completed'
-            if ret != 0:
-                task['status'] = 'failed'
+                if ret != 0:
+                    task['status'] = 'failed'
+                else:
+                    task['status'] = 'completed'
                 
             # Free up GPU resources
             self.gpu_usage[task['server']][task['gpu']] -= task['gpu_request']
